@@ -22,7 +22,10 @@ export const inBounds = (position: Position): boolean => {
   return x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT;
 };
 
-export const getNeighbors = (position: Position): Position[] => {
+export const getNeighbors = (
+  grid: number[][],
+  position: Position
+): Position[] => {
   const { x, y } = position;
   const neighbors = [
     { x: x, y: y - 1 }, // haut
@@ -31,7 +34,14 @@ export const getNeighbors = (position: Position): Position[] => {
     { x: x - 1, y: y }, //gauche
   ];
 
-  return neighbors.filter((neighbor) => inBounds(neighbor));
+  const inGridNeighbors = neighbors.filter((neighbor) => inBounds(neighbor));
+  const filteredNeighbors = inGridNeighbors.filter((neighbor) => {
+    const row = grid[neighbor.y];
+    if (!row) return false;
+    return row[neighbor.x] !== 1;
+  });
+
+  return filteredNeighbors;
 };
 
 export const manhattan = (a: Position, b: Position): number => {
@@ -41,4 +51,18 @@ export const manhattan = (a: Position, b: Position): number => {
 export const popLowestPriority = (queue: NodeInQueue[]) => {
   const sortedQueue = queue.sort((a, b) => a.priority - b.priority);
   return sortedQueue.shift();
+};
+
+export const reconstructPath = (
+  cameFrom: Map<string, string>,
+  currentKey: string
+): string[] => {
+  const pathKey = [currentKey];
+
+  while (cameFrom.has(currentKey)) {
+    currentKey = cameFrom.get(currentKey)!;
+    pathKey.push(currentKey);
+  }
+
+  return pathKey.reverse();
 };
