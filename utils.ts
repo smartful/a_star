@@ -1,5 +1,4 @@
 import type { NodeInQueue, Position } from "./types";
-import { GRID_WIDTH, GRID_HEIGHT } from "./constants";
 
 export const fromCoordinatesToKey = (coordinates: Position): string => {
   return `${coordinates.x},${coordinates.y}`;
@@ -17,9 +16,11 @@ export const fromKeyToCoordinnates = (key: string): Position => {
   return { x, y };
 };
 
-export const inBounds = (position: Position): boolean => {
+export const inBounds = (grid: number[][], position: Position): boolean => {
   const { x, y } = position;
-  return x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT;
+  const gridHeigh = grid.length;
+  const gridWidth = grid[0]?.length ?? 0;
+  return x >= 0 && x < gridWidth && y >= 0 && y < gridHeigh;
 };
 
 export const getNeighbors = (
@@ -34,7 +35,10 @@ export const getNeighbors = (
     { x: x - 1, y: y }, //gauche
   ];
 
-  const inGridNeighbors = neighbors.filter((neighbor) => inBounds(neighbor));
+  const inGridNeighbors = neighbors.filter((neighbor) =>
+    inBounds(grid, neighbor)
+  );
+  // Filtre les obstacles
   const filteredNeighbors = inGridNeighbors.filter((neighbor) => {
     const row = grid[neighbor.y];
     if (!row) return false;
@@ -65,4 +69,26 @@ export const reconstructPath = (
   }
 
   return pathKey.reverse();
+};
+
+export const getAppropriateCost = (
+  grid: number[][],
+  position: Position
+): number => {
+  const row = grid[position.y];
+  if (!row) return 1;
+  const cell = row[position.x];
+
+  switch (cell) {
+    case 0:
+      return 1;
+    case 2:
+      // type de terrain avec un coût à 5
+      return 5;
+    case 3:
+      // type de terrain avec un coût à 20
+      return 20;
+    default:
+      return 1;
+  }
 };
