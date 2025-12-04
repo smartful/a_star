@@ -4,7 +4,8 @@ import {
   fromKeyToCoordinnates,
   getAppropriateCost,
   getNeighbors,
-  manhattan,
+  isDiagonalMove,
+  octileDistance,
   popLowestPriority,
   printGridWithPath,
   reconstructPath,
@@ -37,7 +38,7 @@ const goalKey = fromCoordinatesToKey(goal);
 // Init
 openSet.push({ key: startKey, priority: 0 });
 gScore.set(startKey, 0);
-fScore.set(startKey, manhattan(start, goal));
+fScore.set(startKey, octileDistance(start, goal));
 
 while (openSet.length > 0) {
   const current = popLowestPriority(openSet);
@@ -57,14 +58,16 @@ while (openSet.length > 0) {
   for (const neighbor of neighbors) {
     const neighborKey = fromCoordinatesToKey(neighbor);
     const currentGScore = gScore.get(current.key)!;
-    const cost = getAppropriateCost(grid, neighbor);
-    const tryGScore = currentGScore + cost;
+    const baseCost = getAppropriateCost(grid, neighbor);
+    const isDiagonal = isDiagonalMove(currentPos, neighbor);
+    const directionMutiplier = isDiagonal ? Math.sqrt(2) : 1;
+    const tryGScore = currentGScore + baseCost * directionMutiplier;
     const neighborGScore = gScore.get(neighborKey) ?? Infinity;
 
     if (tryGScore < neighborGScore) {
       cameFrom.set(neighborKey, current.key);
       gScore.set(neighborKey, tryGScore);
-      fScore.set(neighborKey, tryGScore + manhattan(neighbor, goal));
+      fScore.set(neighborKey, tryGScore + octileDistance(neighbor, goal));
 
       const isAlreadyInOpenSet = openSet.some(
         (node) => node.key === neighborKey

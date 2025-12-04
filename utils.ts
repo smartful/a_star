@@ -30,9 +30,13 @@ export const getNeighbors = (
   const { x, y } = position;
   const neighbors = [
     { x: x, y: y - 1 }, // haut
+    { x: x + 1, y: y - 1 }, // haut à droite
     { x: x + 1, y: y }, // droite
+    { x: x + 1, y: y + 1 }, // bas à droite
     { x: x, y: y + 1 }, // bas
-    { x: x - 1, y: y }, //gauche
+    { x: x - 1, y: y + 1 }, // bas à gauche
+    { x: x - 1, y: y }, // gauche
+    { x: x - 1, y: y - 1 }, // haut à gauche
   ];
 
   const inGridNeighbors = neighbors.filter((neighbor) =>
@@ -48,8 +52,24 @@ export const getNeighbors = (
   return filteredNeighbors;
 };
 
+export const isDiagonalMove = (position: Position, neighbor: Position) => {
+  return neighbor.x !== position.x && neighbor.y !== position.y;
+};
+
+/* Heuristiques */
+
+// Pour mouvement purement orthogonaux
 export const manhattan = (a: Position, b: Position): number => {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+};
+
+// Pour mouvement qui autorise les diagonales
+export const octileDistance = (a: Position, b: Position): number => {
+  const dx = Math.abs(a.x - b.x);
+  const dy = Math.abs(a.y - b.y);
+  const minD = Math.min(dx, dy);
+  const maxD = Math.max(dx, dy);
+  return minD * Math.sqrt(2) + (maxD - minD);
 };
 
 export const popLowestPriority = (queue: NodeInQueue[]) => {
