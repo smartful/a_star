@@ -1,16 +1,18 @@
 import {
+  computePathCost,
   fromCoordinatesToKey,
   fromKeyToCoordinnates,
   getAppropriateCost,
   getNeighbors,
   manhattan,
   popLowestPriority,
+  printGridWithPath,
   reconstructPath,
 } from "./utils";
 import type { NodeInQueue, Position } from "./types";
 
 const grid = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 2, 0, 0, 0, 0, 0, 0, 0],
   [0, 2, 2, 0, 0, 3, 3, 3, 0, 0],
   [0, 2, 1, 1, 0, 0, 0, 3, 0, 2],
   [0, 2, 0, 0, 0, 1, 0, 3, 0, 0],
@@ -44,7 +46,8 @@ while (openSet.length > 0) {
   if (current?.key === goalKey) {
     // Reconstruction du chemin
     const pathKey = reconstructPath(cameFrom, current.key);
-    console.log("Path : ", pathKey);
+    printGridWithPath(grid, pathKey, start, goal);
+    console.log("Total cost:", computePathCost(grid, pathKey));
     break;
   }
 

@@ -89,6 +89,69 @@ export const getAppropriateCost = (
       // type de terrain avec un coût à 20
       return 20;
     default:
-      return 1;
+      return Infinity;
   }
+};
+
+export const printGridWithPath = (
+  grid: number[][],
+  pathKeys: string[],
+  start: Position,
+  goal: Position
+): void => {
+  const startKey = fromCoordinatesToKey(start);
+  const goalKey = fromCoordinatesToKey(goal);
+  const pathSet = new Set<string>(pathKeys);
+  for (let y = 0; y < grid.length; y++) {
+    const row = grid[y];
+
+    if (!row) {
+      console.log("");
+      continue;
+    }
+
+    let rowStr = "";
+
+    for (let x = 0; x < row?.length; x++) {
+      const key = `${x},${y}`;
+
+      let char: string;
+      if (key === startKey) {
+        char = "S";
+      } else if (key === goalKey) {
+        char = "G";
+      } else if (pathSet.has(key)) {
+        char = "*";
+      } else {
+        const cell = row[x];
+        if (cell === 0) {
+          char = ".";
+        } else if (cell === 1) {
+          char = "#";
+        } else if (cell === 2) {
+          char = "~";
+        } else if (cell === 3) {
+          char = "^";
+        } else {
+          char = "?";
+        }
+      }
+
+      rowStr += char;
+    }
+    console.log(rowStr);
+  }
+};
+
+export const computePathCost = (
+  grid: number[][],
+  pathKey: string[]
+): number => {
+  let total = 0;
+  for (const key of pathKey) {
+    const position = fromKeyToCoordinnates(key);
+    total += getAppropriateCost(grid, position);
+  }
+
+  return total;
 };
