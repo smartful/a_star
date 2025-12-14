@@ -1,18 +1,15 @@
 import {
-  computePathCost,
+  aStar,
   fromCoordinatesToKey,
   fromKeyToCoordinnates,
-  getAppropriateCost,
-  getNeighbors,
-  isDiagonalMove,
-  octileDistance,
-  popLowestPriority,
+  isBlockedNextStep,
+  makeUnknownGridLike,
+  observeAround,
   printGridWithPath,
-  reconstructPath,
 } from "./utils";
-import type { NodeInQueue, Position } from "./types";
+import type { Position } from "./types";
 
-const grid = [
+const realGrid = [
   [0, 0, 2, 0, 0, 0, 0, 0, 0, 0],
   [0, 2, 2, 0, 0, 3, 3, 3, 0, 0],
   [0, 2, 1, 1, 0, 0, 0, 3, 0, 2],
@@ -21,61 +18,46 @@ const grid = [
   [0, 0, 0, 3, 0, 0, 0, 2, 2, 0],
   [0, 3, 3, 3, 0, 1, 0, 2, 1, 0],
   [2, 0, 0, 0, 0, 1, 0, 2, 0, 0],
-  [0, 2, 2, 0, 0, 0, 0, 2, 0, 0],
+  [0, 2, 2, 0, 1, 0, 0, 2, 0, 0],
   [0, 0, 0, 0, 3, 3, 0, 0, 0, 0],
 ];
-
-const openSet: NodeInQueue[] = [];
-const gScore = new Map<string, number>();
-const fScore = new Map<string, number>();
-const cameFrom = new Map<string, string>();
+let perceivedGrid = makeUnknownGridLike(realGrid);
 
 const start: Position = { x: 0, y: 0 };
 const goal: Position = { x: 9, y: 9 };
 const startKey = fromCoordinatesToKey(start);
 const goalKey = fromCoordinatesToKey(goal);
 
-// Init
-openSet.push({ key: startKey, priority: 0 });
-gScore.set(startKey, 0);
-fScore.set(startKey, octileDistance(start, goal));
+let robotPosition: Position = start;
+let path: string[] = [];
+let step = 0;
 
-while (openSet.length > 0) {
-  const current = popLowestPriority(openSet);
-  if (!current) break;
+while (fromCoordinatesToKey(robotPosition) !== goalKey) {
+  step++;
+  observeAround(realGrid, perceivedGrid, robotPosition);
 
-  if (current?.key === goalKey) {
-    // Reconstruction du chemin
-    const pathKey = reconstructPath(cameFrom, current.key);
-    printGridWithPath(grid, pathKey, start, goal);
-    console.log("Total cost:", computePathCost(grid, pathKey));
-    break;
-  }
+  // Replan if necessary
+  if (path.length === 0 || isBlockedNextStep(perceivedGrid, path)) {
+    path = aStar(perceivedGrid, robotPosition, goal);
 
-  const currentPos = fromKeyToCoordinnates(current?.key);
-  const neighbors = getNeighbors(grid, currentPos);
-
-  for (const neighbor of neighbors) {
-    const neighborKey = fromCoordinatesToKey(neighbor);
-    const currentGScore = gScore.get(current.key)!;
-    const baseCost = getAppropriateCost(grid, neighbor);
-    const isDiagonal = isDiagonalMove(currentPos, neighbor);
-    const directionMutiplier = isDiagonal ? Math.sqrt(2) : 1;
-    const tryGScore = currentGScore + baseCost * directionMutiplier;
-    const neighborGScore = gScore.get(neighborKey) ?? Infinity;
-
-    if (tryGScore < neighborGScore) {
-      cameFrom.set(neighborKey, current.key);
-      gScore.set(neighborKey, tryGScore);
-      fScore.set(neighborKey, tryGScore + octileDistance(neighbor, goal));
-
-      const isAlreadyInOpenSet = openSet.some(
-        (node) => node.key === neighborKey
-      );
-
-      if (!isAlreadyInOpenSet) {
-        openSet.push({ key: neighborKey, priority: fScore.get(neighborKey)! });
-      }
+    if (path.length === 0) {
+      console.log("No path found");
+      break;
     }
+
+    console.log(
+      `\n[Replan #${step}] robotPosition=${fromCoordinatesToKey(robotPosition)}`
+    );
+    printGridWithPath(perceivedGrid, path, robotPosition, goal);
   }
+
+  // Move forward
+  const nextKey = path[1]!;
+  robotPosition = fromKeyToCoordinnates(nextKey);
+
+  path = path.slice(1);
+}
+
+if (fromCoordinatesToKey(robotPosition) === goalKey) {
+  console.log("\n✅ Goal reached at", goalKey);
 }

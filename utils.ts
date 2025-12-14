@@ -16,6 +16,10 @@ export const fromKeyToCoordinnates = (key: string): Position => {
   return { x, y };
 };
 
+export const makeUnknownGridLike = (grid: number[][]): number[][] => {
+  return grid.map((row) => row.map(() => -1));
+};
+
 export const inBounds = (grid: number[][], position: Position): boolean => {
   const { x, y } = position;
   const gridHeigh = grid.length;
@@ -102,6 +106,9 @@ export const getAppropriateCost = (
   switch (cell) {
     case 0:
       return 1;
+    case -1:
+      // type de terrain inconnue
+      return 1;
     case 2:
       // type de terrain avec un coût à 5
       return 5;
@@ -174,4 +181,106 @@ export const computePathCost = (
   }
 
   return total;
+};
+
+export const aStar = (
+  grid: number[][],
+  start: Position,
+  goal: Position
+): string[] => {
+  const startKey = fromCoordinatesToKey(start);
+  const goalKey = fromCoordinatesToKey(goal);
+
+  const openSet: NodeInQueue[] = [];
+  const gScore = new Map<string, number>();
+  const fScore = new Map<string, number>();
+  const cameFrom = new Map<string, string>();
+
+  // Init
+  openSet.push({ key: startKey, priority: 0 });
+  gScore.set(startKey, 0);
+  fScore.set(startKey, octileDistance(start, goal));
+
+  while (openSet.length > 0) {
+    const current = popLowestPriority(openSet);
+    if (!current) return [];
+
+    if (current?.key === goalKey) {
+      return reconstructPath(cameFrom, current.key);
+    }
+
+    const currentPos = fromKeyToCoordinnates(current?.key);
+    const neighbors = getNeighbors(grid, currentPos);
+
+    for (const neighbor of neighbors) {
+      const neighborKey = fromCoordinatesToKey(neighbor);
+      const currentGScore = gScore.get(current.key)!;
+      const baseCost = getAppropriateCost(grid, neighbor);
+      const isDiagonal = isDiagonalMove(currentPos, neighbor);
+      const directionMutiplier = isDiagonal ? Math.sqrt(2) : 1;
+      const tryGScore = currentGScore + baseCost * directionMutiplier;
+      const neighborGScore = gScore.get(neighborKey) ?? Infinity;
+
+      if (tryGScore < neighborGScore) {
+        cameFrom.set(neighborKey, current.key);
+        gScore.set(neighborKey, tryGScore);
+        fScore.set(neighborKey, tryGScore + octileDistance(neighbor, goal));
+
+        const isAlreadyInOpenSet = openSet.some(
+          (node) => node.key === neighborKey
+        );
+
+        if (!isAlreadyInOpenSet) {
+          openSet.push({
+            key: neighborKey,
+            priority: fScore.get(neighborKey)!,
+          });
+        }
+      }
+    }
+  }
+
+  return [];
+};
+
+export const observeAround = (
+  realGrid: number[][],
+  perceivedGrid: number[][],
+  position: Position
+): void => {
+  for (let dy of [-1, 0, 1]) {
+    for (let dx of [-1, 0, 1]) {
+      const x = position.x + dx;
+      const y = position.y + dy;
+      const newPosition = { x, y };
+      if (!inBounds(realGrid, newPosition)) continue;
+
+      const realRow = realGrid[y];
+      const perceivedRow = perceivedGrid[y];
+      if (!realRow || !perceivedRow) continue;
+
+      const value = realRow[x];
+      if (value === undefined) continue;
+
+      perceivedRow[x] = value;
+    }
+  }
+};
+
+export const isBlockedNextStep = (
+  perceivedGrid: number[][],
+  pathKeys: string[]
+): boolean => {
+  if (pathKeys.length < 2) {
+    return true;
+  }
+
+  const nextKey = pathKeys[1];
+  if (nextKey === undefined) {
+    throw new Error(
+      `Invalid key format: "${nextKey}". Key should not be undefined"`
+    );
+  }
+  const { x, y } = fromKeyToCoordinnates(nextKey);
+  return perceivedGrid[y]?.[x] === 1;
 };
