@@ -88,8 +88,19 @@ export const octileDistance = (a: Position, b: Position): number => {
 };
 
 export const popLowestPriority = (queue: NodeInQueue[]) => {
-  const sortedQueue = queue.sort((a, b) => a.priority - b.priority);
-  return sortedQueue.shift();
+  if (queue.length === 0) return undefined;
+
+  let bestIndex = 0;
+
+  for (let i = 0; i < queue.length; i++) {
+    if (queue[i]!.priority < queue[bestIndex]!.priority) {
+      bestIndex = i;
+    }
+  }
+
+  const [best] = queue.splice(bestIndex, 1);
+
+  return best;
 };
 
 export const reconstructPath = (
@@ -203,6 +214,7 @@ export const aStar = (
   const goalKey = fromCoordinatesToKey(goal);
 
   const openSet: NodeInQueue[] = [];
+  const closedSet = new Set<string>();
   const gScore = new Map<string, number>();
   const fScore = new Map<string, number>();
   const cameFrom = new Map<string, string>();
@@ -215,6 +227,8 @@ export const aStar = (
   while (openSet.length > 0) {
     const current = popLowestPriority(openSet);
     if (!current) return [];
+    if (closedSet.has(current.key)) continue;
+    closedSet.add(current.key);
 
     if (current?.key === goalKey) {
       return reconstructPath(cameFrom, current.key);
@@ -225,6 +239,8 @@ export const aStar = (
 
     for (const neighbor of neighbors) {
       const neighborKey = fromCoordinatesToKey(neighbor);
+      if (closedSet.has(neighborKey)) continue;
+
       const currentGScore = gScore.get(current.key)!;
       const baseCost = getAppropriateCost(grid, neighbor);
       const isDiagonal = isDiagonalMove(currentPos, neighbor);
