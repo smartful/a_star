@@ -92,7 +92,7 @@ export const popLowestPriority = (queue: NodeInQueue[]) => {
 
   let bestIndex = 0;
 
-  for (let i = 0; i < queue.length; i++) {
+  for (let i = 1; i < queue.length; i++) {
     if (queue[i]!.priority < queue[bestIndex]!.priority) {
       bestIndex = i;
     }
