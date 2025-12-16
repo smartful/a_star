@@ -34,10 +34,15 @@ let step = 0;
 
 while (fromCoordinatesToKey(robotPosition) !== goalKey) {
   step++;
-  observeAround(realGrid, perceivedGrid, robotPosition);
+  const changedKeys = observeAround(realGrid, perceivedGrid, robotPosition);
+
+  const shouldReplan =
+    path.length === 0 ||
+    isBlockedNextStep(perceivedGrid, path) ||
+    path.slice(2, 6).some((key) => changedKeys.has(key));
 
   // Replan if necessary
-  if (path.length === 0 || isBlockedNextStep(perceivedGrid, path)) {
+  if (shouldReplan) {
     path = aStar(perceivedGrid, robotPosition, goal);
 
     if (path.length === 0) {

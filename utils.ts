@@ -27,6 +27,16 @@ export const inBounds = (grid: number[][], position: Position): boolean => {
   return x >= 0 && x < gridWidth && y >= 0 && y < gridHeigh;
 };
 
+export const isDiagonalMove = (position: Position, neighbor: Position) => {
+  return neighbor.x !== position.x && neighbor.y !== position.y;
+};
+
+export const isWalkable = (grid: number[][], position: Position): boolean => {
+  const row = grid[position.y];
+  if (!row) return false;
+  return row[position.x] !== 1;
+};
+
 export const getNeighbors = (
   grid: number[][],
   position: Position
@@ -41,23 +51,24 @@ export const getNeighbors = (
     { x: x - 1, y: y + 1 }, // bas à gauche
     { x: x - 1, y: y }, // gauche
     { x: x - 1, y: y - 1 }, // haut à gauche
-  ];
-
-  const inGridNeighbors = neighbors.filter((neighbor) =>
-    inBounds(grid, neighbor)
+  ].filter(
+    (neighbor) => inBounds(grid, neighbor) && isWalkable(grid, neighbor)
   );
-  // Filtre les obstacles
-  const filteredNeighbors = inGridNeighbors.filter((neighbor) => {
-    const row = grid[neighbor.y];
-    if (!row) return false;
-    return row[neighbor.x] !== 1;
+
+  return neighbors.filter((neighbor) => {
+    const dx = neighbor.x - x;
+    const dy = neighbor.y - y;
+
+    if (dx === 0 || dy === 0) {
+      // Le mouvement n'est pas en diagonale
+      return true;
+    }
+
+    // Check des côtés
+    const sideA = { x: x + dx, y };
+    const sideB = { x, y: y + dy };
+    return isWalkable(grid, sideA) && isWalkable(grid, sideB);
   });
-
-  return filteredNeighbors;
-};
-
-export const isDiagonalMove = (position: Position, neighbor: Position) => {
-  return neighbor.x !== position.x && neighbor.y !== position.y;
 };
 
 /* Heuristiques */
@@ -247,7 +258,8 @@ export const observeAround = (
   realGrid: number[][],
   perceivedGrid: number[][],
   position: Position
-): void => {
+): Set<string> => {
+  const changedKeys = new Set<string>();
   for (let dy of [-1, 0, 1]) {
     for (let dx of [-1, 0, 1]) {
       const x = position.x + dx;
@@ -262,9 +274,14 @@ export const observeAround = (
       const value = realRow[x];
       if (value === undefined) continue;
 
-      perceivedRow[x] = value;
+      if (perceivedRow[x] !== value) {
+        perceivedRow[x] = value;
+        changedKeys.add(`${x},${y}`);
+      }
     }
   }
+
+  return changedKeys;
 };
 
 export const isBlockedNextStep = (
