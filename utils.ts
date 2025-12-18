@@ -1,4 +1,5 @@
 import type { NodeInQueue, Position } from "./types";
+import { MinHeap } from "./heap";
 
 export const fromCoordinatesToKey = (coordinates: Position): string => {
   return `${coordinates.x},${coordinates.y}`;
@@ -213,20 +214,25 @@ export const aStar = (
   const startKey = fromCoordinatesToKey(start);
   const goalKey = fromCoordinatesToKey(goal);
 
-  const openSet: NodeInQueue[] = [];
+  const openHeap = new MinHeap<NodeInQueue>((a, b) => a.priority < b.priority);
   const closedSet = new Set<string>();
   const gScore = new Map<string, number>();
   const fScore = new Map<string, number>();
   const cameFrom = new Map<string, string>();
 
   // Init
-  openSet.push({ key: startKey, priority: 0 });
+  const startF = octileDistance(start, goal);
   gScore.set(startKey, 0);
-  fScore.set(startKey, octileDistance(start, goal));
+  fScore.set(startKey, startF);
+  openHeap.push({ key: startKey, priority: startF });
 
-  while (openSet.length > 0) {
-    const current = popLowestPriority(openSet);
+  while (openHeap.size() > 0) {
+    const current = openHeap.popMin();
     if (!current) return [];
+    const currentF = fScore.get(current.key) ?? Infinity;
+    // entrée périmée
+    if (Math.abs(current.priority - currentF) > 1e-9) continue;
+
     if (closedSet.has(current.key)) continue;
     closedSet.add(current.key);
 
@@ -241,7 +247,7 @@ export const aStar = (
       const neighborKey = fromCoordinatesToKey(neighbor);
       if (closedSet.has(neighborKey)) continue;
 
-      const currentGScore = gScore.get(current.key)!;
+      const currentGScore = gScore.get(current.key) ?? Infinity;
       const baseCost = getAppropriateCost(grid, neighbor);
       const isDiagonal = isDiagonalMove(currentPos, neighbor);
       const directionMutiplier = isDiagonal ? Math.sqrt(2) : 1;
@@ -253,16 +259,7 @@ export const aStar = (
         gScore.set(neighborKey, tryGScore);
         fScore.set(neighborKey, tryGScore + octileDistance(neighbor, goal));
 
-        const isAlreadyInOpenSet = openSet.some(
-          (node) => node.key === neighborKey
-        );
-
-        if (!isAlreadyInOpenSet) {
-          openSet.push({
-            key: neighborKey,
-            priority: fScore.get(neighborKey)!,
-          });
-        }
+        openHeap.push({ key: neighborKey, priority: fScore.get(neighborKey)! });
       }
     }
   }
